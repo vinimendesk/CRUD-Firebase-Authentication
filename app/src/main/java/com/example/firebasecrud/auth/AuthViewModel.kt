@@ -46,12 +46,26 @@ class AuthViewModel: ViewModel() {
                 // Se logado, atualize o estado de autenticação para autenticado.
                 if (task.isSuccessful) {
                     _authState.value = AuthState.Authenticated
-                // Caso contrário, use 
+                // Caso contrário, use a mensagem de erro.
                 } else {
                     _authState.value = AuthState.Error(task.exception?.message?:"Algo deu errado.")
                 }
             }
 
+    }
+
+    fun singUp(email: String, password: String) {
+        if (email.isEmpty() || password.isEmpty()) {
+            _authState.value = AuthState.Error("Email ou senha não podem estarem vazios.")
+        }
+
+        _authState.value = AuthState.Loading
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isCanceled) {
+                    _authState.value = AuthState.Error(task.exception?.message?: "Algo deu errado.")
+                }
+            }
     }
 
 }

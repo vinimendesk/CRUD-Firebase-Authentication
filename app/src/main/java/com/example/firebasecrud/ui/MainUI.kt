@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.firebasecrud.auth.AuthState
+import com.example.firebasecrud.auth.AuthViewModel
 import com.example.firebasecrud.components.EditDialog
 import com.example.firebasecrud.data.Users
 import com.example.firebasecrud.data.UsersViewModel
@@ -35,16 +37,28 @@ import com.google.firebase.database.DatabaseReference
 @Composable
 fun MainUI(
     databaseReference: DatabaseReference,
+    authViewModel: AuthViewModel,
     usersViewModel: UsersViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
 
     val userUiState = usersViewModel.uiState.collectAsState()
 
+    val authState = authViewModel.authState.collectAsState()
+
     val context = LocalContext.current
 
     LaunchedEffect(Unit) { usersViewModel.loadUsers(databaseReference, context) }
 
+    LaunchedEffect(authState) {
+        when(authState.value) {
+            is AuthState.Unauthenticated -> {
+                navController.navigate("Login")
+                popUpTo("singUp") { inclusive = True }
+            }
+            else -> Unit
+        }
+    }
 
     Column(
         modifier.fillMaxSize(),
@@ -68,7 +82,9 @@ fun MainUI(
             modifier = Modifier.padding(bottom = 8.dp)
         )
         Button(
+            enabled = authState.value != AuthState.Loading,
             onClick = {
+                authViewModel.singUp(userUiState.value.username, userUiState.value.password)
                 val userId = databaseReference.push().key
                 if (userId != null) {
                     usersViewModel.addUser(
