@@ -1,5 +1,6 @@
 package com.example.firebasecrud.auth
 import androidx.lifecycle.ViewModel
+import com.example.firebasecrud.data.UsersViewModel
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,18 +55,28 @@ class AuthViewModel: ViewModel() {
 
     }
 
-    fun singUp(email: String, password: String) {
+    fun signUp(email: String, password: String, usersViewModel: UsersViewModel) {
         if (email.isEmpty() || password.isEmpty()) {
             _authState.value = AuthState.Error("Email ou senha não podem estarem vazios.")
+            return
         }
 
         _authState.value = AuthState.Loading
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
-                if (task.isCanceled) {
+                if (task.isSuccessful) {
+                    _authState.value = AuthState.Authenticated
+                    usersViewModel.onUsernameChange("")
+                    usersViewModel.onPasswordChange("")
+                } else {
                     _authState.value = AuthState.Error(task.exception?.message?: "Algo deu errado.")
                 }
             }
+    }
+
+    fun signOut() {
+        auth.signOut()
+        _authState.value = AuthState.Unauthenticated
     }
 
 }

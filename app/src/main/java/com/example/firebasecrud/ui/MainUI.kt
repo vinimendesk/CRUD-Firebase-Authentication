@@ -27,15 +27,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.example.firebasecrud.auth.AuthState
 import com.example.firebasecrud.auth.AuthViewModel
 import com.example.firebasecrud.components.EditDialog
 import com.example.firebasecrud.data.Users
 import com.example.firebasecrud.data.UsersViewModel
+import com.example.firebasecrud.navigation.ScreenType
 import com.google.firebase.database.DatabaseReference
 
 @Composable
 fun MainUI(
+    navController: NavController,
     databaseReference: DatabaseReference,
     authViewModel: AuthViewModel,
     usersViewModel: UsersViewModel = viewModel(),
@@ -50,11 +53,12 @@ fun MainUI(
 
     LaunchedEffect(Unit) { usersViewModel.loadUsers(databaseReference, context) }
 
-    LaunchedEffect(authState) {
+    LaunchedEffect(authState.value) {
         when(authState.value) {
             is AuthState.Unauthenticated -> {
-                navController.navigate("Login")
-                popUpTo("singUp") { inclusive = True }
+                navController.navigate(ScreenType.LOGIN.toString()) {
+                    popUpTo(ScreenType.MAIN.toString()) { inclusive = true }
+                }
             }
             else -> Unit
         }
@@ -81,24 +85,42 @@ fun MainUI(
             shape = RoundedCornerShape(15.dp),
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        Button(
-            enabled = authState.value != AuthState.Loading,
-            onClick = {
-                authViewModel.singUp(userUiState.value.username, userUiState.value.password)
-                val userId = databaseReference.push().key
-                if (userId != null) {
-                    usersViewModel.addUser(
-                        databaseReference,
-                        context,
-                        Users(userId,userUiState.value.username, userUiState.value.password)
+        Row(
+            horizontalArrangement = Arrangement.SpaceAround,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Botão para criar usuário.
+            Button(
+                enabled = authState.value != AuthState.Loading,
+                onClick = {
+                    authViewModel.signUp(
+                        userUiState.value.username,
+                        userUiState.value.password,
+                        usersViewModel
                     )
-                }
-                usersViewModel.onUsernameChange("")
-                usersViewModel.onPasswordChange("")
-            },
-            modifier = Modifier
+                    val userId = databaseReference.push().key
+                    if (userId != null) {
+                        usersViewModel.addUser(
+                            databaseReference,
+                            context,
+                            Users(userId, userUiState.value.username, userUiState.value.password)
+                        )
+                    }
+                },
+                modifier = Modifier
             ) {
-            Text(text = "Adicionar Usuário")
+                Text(text = "Adicionar Usuário")
+            }
+            // Botão para signOut.
+            Button(
+                enabled = authState.value != AuthState.Loading,
+                onClick = {
+                    authViewModel.signOut()
+                },
+                modifier = Modifier
+            ) {
+                Text(text = "Sair")
+            }
         }
         Divider(modifier = Modifier
             .fillMaxWidth()

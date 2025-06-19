@@ -1,5 +1,6 @@
 package com.example.firebasecrud.ui
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,12 +18,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.example.firebasecrud.auth.AuthState
 import com.example.firebasecrud.auth.AuthViewModel
 import com.example.firebasecrud.data.UsersViewModel
+import com.example.firebasecrud.navigation.ScreenType
 
 @Composable
 fun LoginUI(
+    navController: NavController,
     usersViewModel: UsersViewModel = viewModel(),
     authViewModel: AuthViewModel,
     modifier: Modifier = Modifier
@@ -34,17 +38,26 @@ fun LoginUI(
 
     val context = LocalContext.current
 
-    LaunchedEffect(authState) {
-        when(authState.value) {
-            is AuthState.Authenticated -> {/*
-                navController.navigate("MainUI")
-                popUpto("LoginUI") { inclusive = true } */
+    LaunchedEffect(authState.value) {
+        when (authState.value) {
+            is AuthState.Authenticated -> {
+                // Limpa os campos se o login for bem sucedido.
+                usersViewModel.onUsernameChange("")
+                usersViewModel.onPasswordChange("")
+
+                navController.navigate(ScreenType.MAIN.toString()) {
+                    popUpTo(ScreenType.LOGIN.toString()) { inclusive = true }
+                }
             }
-            is AuthState.Error -> Toast.makeText(
-                context,
-                (authState.value as AuthState.Error).message,
-                Toast.LENGTH_SHORT
+            is AuthState.Error -> {
+                val errorMessage = ((authState.value as AuthState.Error).message)
+                Toast.makeText(
+                    context,
+                    errorMessage,
+                    Toast.LENGTH_SHORT
                 ).show()
+                Log.d("AuthError", "$errorMessage")
+            }
             else -> Unit
         }
     }
@@ -78,9 +91,6 @@ fun LoginUI(
             onClick = {
                 // Realiza o login.
                 authViewModel.login(userUiState.value.username, userUiState.value.password)
-                // Atualiza os dados no UiState.
-                usersViewModel.onUsernameChange("")
-                usersViewModel.onPasswordChange("")
             },
 
         ) {
